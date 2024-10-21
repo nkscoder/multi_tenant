@@ -31,6 +31,10 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = list(filter(None, env("ALLOWED_HOSTS").split(",")))
 
+CORS_ALLOWED_ORIGINS = [
+    'http://tenant1.localhost:8000',
+    'http://tenant2.localhost:8000',
+]
 
 # Add django_tenants apps
 SHARED_APPS = [
@@ -45,6 +49,8 @@ SHARED_APPS = [
     'channels', 
     'notifications',
     'rest_framework',
+    'django_elasticsearch_dsl',
+    'crequest',
 
 ]
 
@@ -64,6 +70,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_tenants.middleware.main.TenantMainMiddleware',
+    'core.middleware.ThreadLocalMiddleware',
+    'crequest.middleware.CrequestMiddleware',
+    'core_tenant.middleware.ThreadLocalMiddleware',
+
+
+
 
 ]
 
@@ -146,11 +158,27 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGIN_REDIRECT_URL = 'search'  # Where to redirect after login
+LOGOUT_REDIRECT_URL = 'login'  # Redirect to login after logout
+
+
+# ELASTICSEARCH_DSL = {
+#     'default': {
+#         'hosts': 'localhost:9200'
+#     },
+# }
+
+from elasticsearch import Elasticsearch
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'localhost:9200'
+        'hosts': 'http://localhost:9200'  # Add the 'http://' part to fix the issue
     },
+}
+
+# Ensure Elasticsearch is connected
+connections = {
+    'default': Elasticsearch(['http://localhost:9200'])  # Add 'http://' here too
 }
 
 ASGI_APPLICATION = 'multi_tenant.asgi.application'
@@ -192,4 +220,25 @@ LOGGING = {
             'propagate': True,
         },
     },
+    'django_elasticsearch_dsl': {
+            'handlers': ['file'],
+            'level': 'DEBUG',  # You can change this to 'ERROR' if you only want error logs
+            'propagate': True,
+    },
+    'elasticsearch': {
+        'handlers': ['file'],
+        'level': 'DEBUG',  # Capture Elasticsearch logs
+        'propagate': True,
+    },
+}
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Replace with your Redis server URL
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
 }

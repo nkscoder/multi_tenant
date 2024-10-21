@@ -1,0 +1,25 @@
+<!-- your_template.html -->
+
+<h1>Product Search Results</h1>
+<form method="GET" action="{% url 'product_search' %}">
+    <input type="text" name="q" placeholder="Search products..." value="{{ request.GET.q }}">
+    <button type="submit">Search</button>
+</form>
+
+<ul>
+    {% for product in results %}
+        <li>{{ product.name }} - {{ product.price }}</li>
+    {% endfor %}
+</ul>
+
+<!-- Pagination controls -->
+<div>
+    {% if results.hits.total > page_size %}
+        {% if page > 1 %}
+            <a href="?q={{ request.GET.q }}&page={{ page|add:-1 }}">Previous</a>
+        {% endif %}
+        {% if page < results.hits.total // page_size %}
+            <a href="?q={{ request.GET.q }}&page={{ page|add:1 }}">Next</a>
+        {% endif %}
+    {% endif %}
+</div>
