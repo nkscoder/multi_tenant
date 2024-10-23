@@ -67,9 +67,9 @@ def product_search(request):
         cache_key = f"search:{tenant}:{query}:{page}"
         results = cache.get(cache_key)
 
-        # if results is None:  
-        results = search_products(query, page, page_size)
-        cache.set(cache_key, results, timeout=300)
+        if results is None:  
+            results = search_products(query, page, page_size)
+            cache.set(cache_key, results, timeout=300)
         total_hits = results.hits.total.value
         total_pages = (total_hits + page_size - 1) // page_size  # Calculate total pages
         return render(request, 'product_search.html', {
