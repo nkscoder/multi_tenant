@@ -162,24 +162,25 @@ LOGIN_REDIRECT_URL = 'search'  # Where to redirect after login
 LOGOUT_REDIRECT_URL = 'login'  # Redirect to login after logout
 
 
-# ELASTICSEARCH_DSL = {
-#     'default': {
-#         'hosts': 'localhost:9200'
-#     },
-# }
 
 from elasticsearch import Elasticsearch
 
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'http://localhost:9200'  # Add the 'http://' part to fix the issue
+        'hosts': "http://localhost:9200",  # Ensure this is correct
+        'basic_auth':("elastic","elastic"),
     },
 }
 
-# Ensure Elasticsearch is connected
 connections = {
-    'default': Elasticsearch(['http://localhost:9200'])  # Add 'http://' here too
+    'default': Elasticsearch(
+        ["http://localhost:9200"],  # Ensure this is correct
+        basic_auth=("elastic", "elastic"),
+        
+    )
 }
+
+
 
 ASGI_APPLICATION = 'multi_tenant.asgi.application'
 
