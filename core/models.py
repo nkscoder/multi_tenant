@@ -2,6 +2,8 @@ from django.db import models
 from django_tenants.models import TenantMixin,DomainMixin
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.contrib.auth.models import BaseUserManager
+from rest_framework.authtoken.models import Token as DefaultToken
+from django.conf import settings
 
 # Tenant Model
 class Tenant(TenantMixin):
@@ -73,3 +75,13 @@ class User(AbstractUser):
 
     def __str__(self):
         return f'{self.username} ({self.tenant})'
+    
+    
+    
+
+# class Token(DefaultToken):
+#     custom_user = models.ForeignKey(
+#         settings.AUTH_USER_MODEL, 
+#         related_name='auth_tokens', 
+#         on_delete=models.CASCADE
+#     )    

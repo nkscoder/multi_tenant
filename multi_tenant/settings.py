@@ -31,10 +31,6 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = list(filter(None, env("ALLOWED_HOSTS").split(",")))
 
-CORS_ALLOWED_ORIGINS = [
-    'http://tenant1.localhost:8000',
-    'http://tenant2.localhost:8000',
-]
 
 # Add django_tenants apps
 SHARED_APPS = [
@@ -49,8 +45,11 @@ SHARED_APPS = [
     'channels', 
     'notifications',
     'rest_framework',
+    'rest_framework.authtoken',
     'django_elasticsearch_dsl',
     'crequest',
+    'corsheaders',
+
 
 ]
 
@@ -64,6 +63,7 @@ INSTALLED_APPS = SHARED_APPS + TENANT_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -151,8 +151,21 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+# STATIC_URL = 'static/'
 
+
+# STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+# STATIC_URL = "/static/"
+# STATICFILES_DIRS = [
+#     "static_files",
+# ]
+
+MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
+MEDIA_URL = "/media/"
+
+
+STATIC_URL = 'static/'  # This should already be present
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -243,3 +256,27 @@ CACHES = {
         }
     }
 }
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", 
+    "http://tenant2.localhost:8000",
+    "http://tenant1.localhost:8000",
+    # other domains...
+]
+
+
+CORS_ALLOW_CREDENTIALS = True
+# AUTH_USER_MODEL = 'core.User' 

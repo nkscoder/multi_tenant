@@ -5,89 +5,64 @@ from channels.exceptions import StopConsumer
 
 logger = logging.getLogger(__name__)
 
-class NotificationConsumer(AsyncWebsocketConsumer):
+import json
+import logging
+from channels.generic.websocket import AsyncWebsocketConsumer
 
+logger = logging.getLogger(__name__)
+
+class PrivateMessageConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        """Handle WebSocket connection."""
-        try:
-            self.group_name = 'notifications'
-            # Join group for notifications
-            await self.channel_layer.group_add(
-                self.group_name,
-                self.channel_name
-            )
-            await self.accept()
-            logger.info(f"WebSocket connected: {self.channel_name}")
-        except Exception as e:
-            logger.error(f"Error while connecting WebSocket: {e}")
-            await self.close(code=1011)  # 1011 indicates server error during WebSocket connection
+        self.username = self.scope['url_route']['kwargs']['username']
+        self.room_group_name = f'chat_{self.username}'
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+        logger.info(f"WebSocket connected: {self.channel_name} for room {self.room_group_name}")
 
     async def disconnect(self, close_code):
-        """Handle WebSocket disconnection."""
-        try:
-            await self.channel_layer.group_discard(
-                self.group_name,
-                self.channel_name
-            )
-            logger.info(f"WebSocket disconnected: {self.channel_name}")
-        except Exception as e:
-            logger.error(f"Error while disconnecting WebSocket: {e}")
-        finally:
-            raise StopConsumer()
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        logger.info(f"WebSocket disconnected: {self.channel_name} from room {self.room_group_name}")
 
     async def receive(self, text_data):
-        """Receive and process messages from WebSocket."""
-        try:
-            logger.info("Message received from client.")
-            text_data_json = json.loads(text_data)  # Decode incoming JSON data
+        data = json.loads(text_data)
+        message = data['message']
+        recipient = data.get('recipient')  # Get the recipient from the message
+
+        logger.info(f"Message received from {self.username}: {message}")
+
+        # Check if a recipient is provided
+        if recipient:
+            recipient_group_name = f'chat_{recipient}'
             
-            # Validate message format
-            if not isinstance(text_data_json, dict):
-                raise ValueError("Invalid message format, expected a dictionary.")
+            # Send message to the recipient's room group
+            await self.channel_layer.group_send(
+                recipient_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': message,
+                    'sender': self.username
+                }
+            )
+            logger.info(f"Sending message from {self.username} to {recipient_group_name}: {message}")
+        else:
+            logger.warning("No recipient specified")
 
-            message = text_data_json.get('message', '').strip()  # Safely retrieve and strip whitespace
+    async def chat_message(self, event):
+        message = event['message']
+        sender = event['sender']
 
-            if message:
-                logger.info(f"Received notification: {message}")
-                # Broadcast message to the group
-                await self.channel_layer.group_send(
-                    self.group_name,
-                    {
-                        'type': 'send_notification',
-                        'message': message
-                    }
-                )
-            else:
-                logger.warning("Empty message received.")
-                await self.send(text_data=json.dumps({
-                    'error': 'Empty message received'
-                }))
-        except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON: {e}")
-            await self.send(text_data=json.dumps({
-                'error': 'Invalid message format'
-            }))
-        except ValueError as e:
-            logger.error(f"Message validation error: {e}")
-            await self.send(text_data=json.dumps({
-                'error': str(e)
-            }))
-        except Exception as e:
-            logger.error(f"Error in receive method: {e}")
-            await self.close(code=1011)  # Server error during message handling
-
-    async def send_notification(self, event):
-        """Send notifications to WebSocket."""
-        try:
-            message = event.get('message', '').strip()
-            if message:
-                logger.info(f"Sending notification to client: {message}")
-                # Send message to WebSocket
-                await self.send(text_data=json.dumps({
-                    'message': message
-                }))
-            else:
-                logger.warning("No message to send.")
-        except Exception as e:
-            logger.error(f"Error sending notification: {e}")
-            await self.close(code=1011)  # Server error during notification sending
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({
+            'message': message,
+            'sender': sender
+        }))
